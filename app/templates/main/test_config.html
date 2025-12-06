@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Test Configuration{% endblock %}
+
+{% block content %}
+  <h1>Test Configuration</h1>
+
+  <form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div>
+      {{ form.mode.label }}<br>
+      {{ form.mode() }}
+    </div>
+
+    <div>
+      {{ form.duration.label }}<br>
+      {{ form.duration() }}
+      <small>Used when mode is "time"</small>
+    </div>
+
+    <div>
+      {{ form.word_count.label }}<br>
+      {{ form.word_count() }}
+      <small>Used when mode is "words"</small>
+    </div>
+
+    <div style="margin-top: 1rem;">
+      {{ form.submit() }}
+    </div>
+  </form>
+{% endblock %}

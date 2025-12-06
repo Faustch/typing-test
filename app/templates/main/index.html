@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+  <h1>Typing Speed Test</h1>
+
+  {% if current_user.is_authenticated %}
+    <p>Welcome back, {{ current_user.display_name or current_user.username }}!</p>
+    <p>(Later this will show your quick test + dashboard links.)</p>
+  {% else %}
+    <p>Welcome! Log in or register to start saving your typing test history.</p>
+  {% endif %}
+{% endblock %}

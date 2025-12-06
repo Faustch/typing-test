@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Typing Test{% endblock %}
+
+{% block content %}
+  <h1>Typing Test</h1>
+
+  <p>
+    Mode: <strong>{{ config.mode }}</strong>
+    {% if config.mode == "time" %}
+      ({{ config.duration }} seconds)
+    {% else %}
+      ({{ config.word_count }} words)
+    {% endif %}
+  </p>
+
+  <div id="test-container">
+    <p id="prompt">{{ prompt_text }}</p>
+
+    <textarea id="input" rows="5" cols="80"
+      placeholder="Start typing here..."></textarea>
+
+    <p id="timer">Time: <span id="time-left"></span></p>
+    <p id="live-stats">
+      WPM: <span id="live-wpm">0</span> |
+      Accuracy: <span id="live-accuracy">0</span>% |
+      Errors: <span id="live-errors">0</span> |
+      Backspaces: <span id="live-backspaces">0</span>
+    </p>
+  </div>
+
+  <div id="summary" style="display:none; margin-top:1rem;">
+    <h2>Test Summary</h2>
+    <p>WPM: <span id="sum-wpm"></span></p>
+    <p>Accuracy: <span id="sum-accuracy"></span>%</p>
+    <p>Errors: <span id="sum-errors"></span></p>
+    <p>Backspaces: <span id="sum-backspaces"></span></p>
+    <p id="save-info"></p>
+    <a href="{{ url_for('main.test') }}">Take another test</a> |
+    <a href="{{ url_for('main.history') }}">View history</a>
+  </div>
+
+  <script>
+  (function() {
+    const mode = "{{ config.mode }}";
+    const testDuration = Number("{{ config.duration | default(30) }}");
+    const testWordCount = Number("{{ config.word_count | default(50) }}");
+    const promptText = `{{ prompt_text | replace('\n', ' ') }}`;
+
+    const inputEl = document.getElementById("input");
+    const timeLeftEl = document.getElementById("time-left");
+    const liveWpmEl = document.getElementById("live-wpm");
+    const liveAccEl = document.getElementById("live-accuracy");
+    const liveErrorsEl = document.getElementById("live-errors");
+    const liveBackspacesEl = document.getElementById("live-backspaces");
+
+    const sumWpmEl = document.getElementById("sum-wpm");
+    const sumAccEl = document.getElementById("sum-accuracy");
+    const sumErrorsEl = document.getElementById("sum-errors");
+    const sumBackspacesEl = document.getElementById("sum-backspaces");
+    const summaryEl = document.getElementById("summary");
+    const saveInfoEl = document.getElementById("save-info");
+
+    let started = false;
+    let startTime = null;
+    let timerId = null;
+    let totalBackspaces = 0;
+
+    function computeStats(text, elapsedSec) {
+      const prompt = promptText;
+      let correct = 0;
+      let errors = 0;
+
+      const len = Math.min(text.length, prompt.length);
+      for (let i = 0; i < len; i++) {
+        if (text[i] === prompt[i]) {
+          correct++;
+        } else {
+          errors++;
+        }
+      }
+      // extra chars beyond prompt count as errors
+      if (text.length > prompt.length) {
+        errors += (text.length - prompt.length);
+      }
+
+      const rawChars = text.length;
+      const minutes = Math.max(elapsedSec / 60, 1e-6);
+      const wpm = (correct / 5) / minutes;
+      const accuracy = rawChars > 0 ? (correct / rawChars) * 100 : 0;
+
+      return {
+        wpm: wpm,
+        accuracy: accuracy,
+        errors: errors,
+        backspaces: totalBackspaces,
+        raw_chars: rawChars,
+        correct_chars: correct
+      };
+    }
+
+    function updateLiveStats() {
+      if (!started || !startTime) return;
+      const now = Date.now();
+      const elapsedSec = (now - startTime) / 1000;
+      const text = inputEl.value;
+
+      const stats = computeStats(text, elapsedSec);
+      liveWpmEl.textContent = stats.wpm.toFixed(1);
+      liveAccEl.textContent = stats.accuracy.toFixed(1);
+      liveErrorsEl.textContent = stats.errors;
+      liveBackspacesEl.textContent = stats.backspaces;
+    }
+
+    function endTest() {
+      clearInterval(timerId);
+      inputEl.disabled = true;
+
+      const now = Date.now();
+      const elapsedSec = (now - startTime) / 1000;
+      const text = inputEl.value;
+      const stats = computeStats(text, elapsedSec);
+
+      sumWpmEl.textContent = stats.wpm.toFixed(1);
+      sumAccEl.textContent = stats.accuracy.toFixed(1);
+      sumErrorsEl.textContent = stats.errors;
+      sumBackspacesEl.textContent = stats.backspaces;
+      summaryEl.style.display = "block";
+
+      // send to backend
+      fetch("{{ url_for('main.test_complete') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          mode: mode,
+          duration: mode === "time" ? testDuration : null,
+          word_count: mode === "words" ? testWordCount : null,
+          wpm: stats.wpm,
+          accuracy: stats.accuracy,
+          errors: stats.errors,
+          backspaces: stats.backspaces,
+          raw_chars: stats.raw_chars,
+          correct_chars: stats.correct_chars
+        })
+      }).then(res => res.json())
+        .then(data => {
+          if (data.saved) {
+            saveInfoEl.textContent = "Result saved to your account.";
+          } else {
+            saveInfoEl.textContent = "Result not saved (log in to store history).";
+          }
+        }).catch(() => {
+          saveInfoEl.textContent = "Could not contact server to save result.";
+        });
+    }
+
+    function startTimer() {
+      if (started) return;
+      started = true;
+      startTime = Date.now();
+
+      if (mode === "time") {
+        let remaining = testDuration;
+        timeLeftEl.textContent = remaining;
+
+        timerId = setInterval(() => {
+          remaining -= 1;
+          timeLeftEl.textContent = remaining;
+          updateLiveStats();
+
+          if (remaining <= 0) {
+            endTest();
+          }
+        }, 1000);
+      } else {
+        // word mode: no countdown, just show elapsed
+        timerId = setInterval(() => {
+          const now = Date.now();
+          const elapsedSec = (now - startTime) / 1000;
+          timeLeftEl.textContent = elapsedSec.toFixed(1) + "s";
+          updateLiveStats();
+
+          // end when enough words typed
+          const words = inputEl.value.trim().split(/\s+/).filter(Boolean).length;
+          if (words >= testWordCount) {
+            endTest();
+          }
+        }, 200);
+      }
+    }
+
+    inputEl.addEventListener("keydown", (e) => {
+      if (!started) {
+        startTimer();
+      }
+      if (e.key === "Backspace") {
+        totalBackspaces += 1;
+      }
+
+      //press enter to submit/ finish the test
+      if (e.key ==="Enter"){
+        e.preventDefault();
+        endTest();
+      }
+    });
+
+    // initial display
+    if (mode === "time") {
+      timeLeftEl.textContent = testDuration;
+    } else {
+      timeLeftEl.textContent = "0.0s";
+    }
+  })();
+  </script>
+{% endblock %}

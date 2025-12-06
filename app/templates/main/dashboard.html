@@ -1,0 +1,16 @@
+{%extends "base.html"%}
+{%block title%}Dashboard{% endblock %}
+
+{% block content %}
+    <h1>Dashboard</h1>
+
+    {% if stats.count == 0 %}
+        <p>You have no tests yet. Take a test to see your stats</p>
+    {% else %}
+        <p>Total tests taken: <strong>{{ stats.count }}</strong></p>
+        <p>Average WPM: <strong>{{ "%.1f"|format(stats.avg_wpm) }}</strong></p>
+        <p>Best WPM: <strong>{{ "%.1f"|format(stats.best_wpm) }}</strong></p>
+        <p>Average accuracy: <strong>{{ "%.1f"|format(stats.avg_accuracy) }}%</strong></p>
+        <p><a href="{{url_for('main.history')}}">View detailed history</a></p>
+    {% endif %}
+{% endblock %}

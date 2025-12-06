@@ -1,0 +1,44 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+nav {
+  background: #111;
+  color: #fff;
+  padding: 0.5rem 1rem;
+}
+
+nav a {
+  color: #fff;
+  margin-right: 1rem;
+  text-decoration: none;
+}
+
+main {
+  padding: 1.5rem;
+}
+
+#flashes {
+  list-style: none;
+  padding: 0.5rem 1.5rem;
+}
+
+.flash {
+  padding: 0.5rem;
+  margin-bottom: 0.25rem;
+  border-radius: 4px;
+}
+
+.flash.success {
+  background: #d1fae5;
+}
+
+.flash.danger {
+  background: #fee2e2;
+}
+
+.flash.info {
+  background: #e0f2fe;
+}

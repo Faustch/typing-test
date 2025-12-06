@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Test History{% endblock %}
+
+{% block content %}
+  <h1>Your Test History</h1>
+
+  {% if tests %}
+    <table border="1" cellpadding="6" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Mode</th>
+          <th>Duration / Words</th>
+          <th>WPM</th>
+          <th>Accuracy (%)</th>
+          <th>Errors</th>
+          <th>Backspaces</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tests %}
+          <tr>
+            <td>{{ t.timestamp.strftime("%Y-%m-%d %H:%M:%S") if t.timestamp else "" }}</td>
+            <td>{{ t.mode }}</td>
+            <td>
+              {% if t.mode == "time" %}
+                {{ t.duration }}s
+              {% else %}
+                {{ t.word_count }} words
+              {% endif %}
+            </td>
+            <td>{{ "%.1f"|format(t.wpm) if t.wpm is not none else "" }}</td>
+            <td>{{ "%.1f"|format(t.accuracy) if t.accuracy is not none else "" }}</td>
+            <td>{{ t.errors }}</td>
+            <td>{{ t.backspaces }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>You have no saved tests yet. Take a test and make sure you are logged in.</p>
+  {% endif %}
+{% endblock %}
