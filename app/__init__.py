@@ -25,6 +25,17 @@ def create_app():
     oauth.init_app(app)
     login_manager.login_view = "auth.login"
 
+    #oauth
+    oauth.register(
+        name="google",
+        client_id = app.config.get("GOOGLE_CLIENT_ID"),
+        client_secret=app.config.get("GOOGLE_CLIENT_SECRET"),
+        server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={
+            "scope":"openid email profile",
+        },
+    )
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
 

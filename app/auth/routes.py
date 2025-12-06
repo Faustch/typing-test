@@ -7,7 +7,8 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length
 
 from . import auth_bp
 from ..models import User 
-from ..extensions import mongo
+from ..extensions import mongo, oauth
+from bson.objectid import ObjectId
 
 class RegisterForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired(), Length(min=3, max=30)])
@@ -87,3 +88,54 @@ def logout():
     logout_user()
     flash("You have been logged out.", "info")
     return redirect(url_for("main.index"))
+
+@auth_bp.route("/login/google")
+def google_login():
+    redirect_uri = url_for("auth.google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+@auth_bp.route("/google/callback")
+def google_callback():
+    token = oauth.google.authorize_access_token()
+
+    resp = oauth.google.get("https://openidconnect.googleapis.com/v1/userinfo")
+    profile=resp.json()
+
+    google_id = profile.get("sub")
+    email = profile.get("email")
+    name = profile.get("name") or email.split("@")[0]
+
+    if not email:
+        flash("Google login failed: no email returned.", "danger")
+        return redirect(url_for("auth.login"))
+    
+    doc = mongo.db.users.find_one(
+        {"oauth_provider": "google", "oauth_id": google_id}
+    )
+
+    if not doc:
+        doc = mongo.db.users.find_one({"email": email})
+        if doc:
+            mongo.db.users.update_one(
+                {"_id": doc["_id"]},
+                {"$set": {"oauth_provider": "google", "oauth_id": google_id}},
+            )
+        else:
+            result = mongo.db.users.insert_one(
+                {
+                    "username": email.split("@")[0],
+                    "email": email,
+                    "display_name":name,
+                    "oauth_provider":"google",
+                    "oauth_id":google_id,
+                }
+            )
+            doc = mongo.db.users.find_one({"_id":result.inserted_id})
+    
+    user = User.from_doc(doc)
+    login_user(user)
+    flash("Logged in with Google.", "success")
+    next_page = request.args.get("next") or url_for("main.index")
+    return redirect(next_page)
+
+
