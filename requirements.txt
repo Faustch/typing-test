@@ -6,3 +6,4 @@ Flask-Login
 Flask-PyMongo
 Authlib
 Werkzeug
+random-word

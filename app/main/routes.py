@@ -5,7 +5,7 @@ from wtforms import SelectField, SubmitField
 
 from datetime import datetime, UTC
 from bson.objectid import ObjectId
-
+from random_word import RandomWords
 
 from . import main_bp
 from ..extensions import mongo
@@ -63,12 +63,17 @@ def test():
         "test_config",
         {"mode": "time", "duration": 30, "word_count": 50}
     )
-
+    r = RandomWords()
+    prompt_text = ""
+    LENMAX = 100
+    while (len(prompt_text) < LENMAX):
+        new = r.get_random_word()
+        if (len(new)<10):
+            prompt_text += new + " "
     #change later on idk what to though
-    prompt_text = (
-        "The quick brown fox jumps over the lazy dog. "
-        "Practice typing this sentence as accurately and quickly as you can."
-    )
+    # prompt_text = (
+    #     "The quick brown fox jumps over the lazy dog. "
+    # )
     return render_template("main/test.html", config=cfg, prompt_text=prompt_text)
 
 @main_bp.route("/test/complete", methods=["POST"])
