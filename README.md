@@ -4,6 +4,9 @@ A full-stack typing speed test web application inspired by Monkeytype.
 Built with **Flask**, **MongoDB Atlas**, **Flask-Login**, and **Authlib** for OAuth.  
 Users can take typing tests, view their typing history, and track personal statistics.
 
+### Vercel Links:
+https://typing-test-delta-three.vercel.app/
+https://typing-test-glyphiis-projects.vercel.app/
 ---
 
 ## 🚀 Features
